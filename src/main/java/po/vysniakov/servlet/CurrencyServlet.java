@@ -24,16 +24,17 @@ public class CurrencyServlet extends HttpServlet {
         resp.setCharacterEncoding("UTF-8");
         Optional<String> currency = getRequestedCurrency(req);
         if (currency.isEmpty()) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Input correct path ../currency/{currencyCode}");
         } else {
             Optional<Currency> current = databaseManager.findOne(currency.get());
             try (PrintWriter writer = resp.getWriter()) {
                 current.ifPresentOrElse(x -> writer.println(new Gson().toJson(x)),
                         () -> {
                             try {
-                                resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+                                resp.sendError(HttpServletResponse.SC_NOT_FOUND,
+                                        "There is no data about " + currency.get());
                             } catch (IOException e) {
-                                throw new ResponseSendErrorException("Can't send error through response", e);
+                                throw new ResponseSendErrorException("Cannot send error through response", e);
                             }
                         });
             }

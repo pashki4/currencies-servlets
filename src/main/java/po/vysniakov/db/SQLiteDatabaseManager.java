@@ -2,6 +2,7 @@ package po.vysniakov.db;
 
 import po.vysniakov.currencie.dao.Currency;
 import po.vysniakov.exception.ConnectionException;
+import po.vysniakov.exception.SaveException;
 import po.vysniakov.exception.PrepareStatementException;
 
 import java.sql.*;
@@ -16,6 +17,7 @@ public class SQLiteDatabaseManager implements DatabaseManager {
     private static final String URL = "jdbc:sqlite:" + get("db.url") + get("db.name");
     private static final String SELECT_ALL_SQL = "SELECT * FROM currencies;";
     private static final String SELECT_ONE_SQL = "SELECT * FROM currencies WHERE code = ?;";
+    private static final String INSERT_CURRENCY_SQL = "INSERT INTO currencies (code, full_name, sign) VALUES (?, ?, ?);";
 
     @Override
     public List<Currency> findAll() {
@@ -27,7 +29,7 @@ public class SQLiteDatabaseManager implements DatabaseManager {
             PreparedStatement preparedSelectStatement = prepareSelectAllStatement(connection);
             return getCurrencies(preparedSelectStatement);
         } catch (SQLException e) {
-            throw new ConnectionException("Can't create connection for URL: " + URL, e);
+            throw new ConnectionException("Cannot create connection for URL: " + URL, e);
         }
     }
 
@@ -35,7 +37,7 @@ public class SQLiteDatabaseManager implements DatabaseManager {
         try {
             return connection.prepareStatement(SELECT_ALL_SQL);
         } catch (SQLException e) {
-            throw new PrepareStatementException("Can't prepare select statement for query: " + SELECT_ALL_SQL, e);
+            throw new PrepareStatementException("Cannot prepare select statement for query: " + SELECT_ALL_SQL, e);
         }
     }
 
@@ -62,7 +64,7 @@ public class SQLiteDatabaseManager implements DatabaseManager {
         try (Connection connection = DriverManager.getConnection(URL)) {
             return findCurrency(connection, name);
         } catch (SQLException e) {
-            throw new ConnectionException("Can't create connection for URL: " + URL, e);
+            throw new ConnectionException("Cannot create connection for URL: " + URL, e);
         }
     }
 
@@ -77,7 +79,7 @@ public class SQLiteDatabaseManager implements DatabaseManager {
             fillSelectOneStatement(selectOneStatement, code);
             return selectOneStatement;
         } catch (SQLException e) {
-            throw new PrepareStatementException("Can't prepare select statement for query: " + SELECT_ONE_SQL, e);
+            throw new PrepareStatementException("Cannot prepare select statement for query: " + SELECT_ONE_SQL, e);
         }
     }
 
@@ -96,5 +98,47 @@ public class SQLiteDatabaseManager implements DatabaseManager {
             return Optional.of(currency);
         }
         return Optional.empty();
+    }
+
+    @Override
+    public Currency save(Currency currency) {
+        try (Connection connection = DriverManager.getConnection(URL)) {
+            return saveCurrency(connection, currency);
+        } catch (SQLException e) {
+            throw new ConnectionException("Cannot create connection for URL: " + URL, e);
+        }
+    }
+
+    private Currency saveCurrency(Connection connection, Currency currency) {
+        try {
+            PreparedStatement prepareInsertStatement = connection.prepareStatement(INSERT_CURRENCY_SQL,
+                    Statement.RETURN_GENERATED_KEYS);
+            fillInsertStatement(prepareInsertStatement, currency);
+            int rows = prepareInsertStatement.executeUpdate();
+            if (rows == 0) {
+                throw new SaveException("Currency with code: " + currency.getCode()
+                        + " already exists");
+            } else {
+                Long generatedKey = extractGeneratedKey(prepareInsertStatement);
+                currency.setId(generatedKey);
+                return currency;
+            }
+        } catch (SQLException e) {
+            throw new PrepareStatementException("Cannot prepare statement for: " + INSERT_CURRENCY_SQL, e);
+        }
+    }
+
+    private void fillInsertStatement(PreparedStatement prepareInsertStatement, Currency currency) throws SQLException {
+        prepareInsertStatement.setString(1, currency.getCode());
+        prepareInsertStatement.setString(2, currency.getName());
+        prepareInsertStatement.setString(3, currency.getSign());
+    }
+
+    private static Long extractGeneratedKey(PreparedStatement prepareInsertStatement) throws SQLException {
+        ResultSet generatedKey = prepareInsertStatement.getGeneratedKeys();
+        if (generatedKey.next()) {
+            return generatedKey.getLong(1);
+        }
+        return null;
     }
 }

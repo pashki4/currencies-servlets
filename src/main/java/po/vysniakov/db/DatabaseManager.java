@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface DatabaseManager {
     List<Currency> findAll();
     Optional<Currency> findOne(String name);
+
+    Currency save(Currency currency);
 }
