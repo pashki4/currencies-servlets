@@ -4,16 +4,16 @@ public class Currency {
     private Long id;
     private String name;
     private String code;
-    private String sing;
+    private String sign;
 
     public Currency() {
     }
 
-    public Currency(Long id, String name, String code, String sing) {
+    public Currency(Long id, String name, String code, String sign) {
         this.id = id;
         this.name = name;
         this.code = code;
-        this.sing = sing;
+        this.sign = sign;
     }
 
     public Long getId() {
@@ -40,12 +40,12 @@ public class Currency {
         this.code = code;
     }
 
-    public String getSing() {
-        return sing;
+    public String getSign() {
+        return sign;
     }
 
-    public void setSing(String sing) {
-        this.sing = sing;
+    public void setSign(String sign) {
+        this.sign = sign;
     }
 
     @Override
@@ -54,7 +54,7 @@ public class Currency {
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", code='" + code + '\'' +
-                ", sing='" + sing + '\'' +
+                ", sing='" + sign + '\'' +
                 '}';
     }
 }

@@ -1,5 +1,7 @@
 package po.vysniakov;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -22,8 +24,9 @@ public class CurrenciesServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         DatabaseManager databaseManager = new SQLiteDatabaseManager();
         List<Currency> currencies = databaseManager.selectAll();
+        JsonElement jsonTree = new Gson().toJsonTree(currencies);
         try (PrintWriter writer = response.getWriter()) {
-            writer.println(currencies);
+            writer.println(jsonTree);
             writer.flush();
         }
     }

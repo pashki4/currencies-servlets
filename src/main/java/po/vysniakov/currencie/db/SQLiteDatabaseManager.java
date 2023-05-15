@@ -41,7 +41,7 @@ public class SQLiteDatabaseManager implements DatabaseManager {
             currency.setId(resultSet.getLong("id"));
             currency.setCode(resultSet.getString("code"));
             currency.setName(resultSet.getString("full_name"));
-            currency.setSing(resultSet.getString("sign"));
+            currency.setSign(resultSet.getString("sign"));
             result.add(currency);
         }
         return result;
