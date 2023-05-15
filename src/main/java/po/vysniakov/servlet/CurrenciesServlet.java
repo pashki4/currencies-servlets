@@ -1,15 +1,14 @@
-package po.vysniakov;
+package po.vysniakov.servlet;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import po.vysniakov.currencie.Currency;
-import po.vysniakov.currencie.db.DatabaseManager;
-import po.vysniakov.currencie.db.SQLiteDatabaseManager;
+import po.vysniakov.currencie.dao.Currency;
+import po.vysniakov.db.DatabaseManager;
+import po.vysniakov.db.SQLiteDatabaseManager;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -23,10 +22,10 @@ public class CurrenciesServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         DatabaseManager databaseManager = new SQLiteDatabaseManager();
-        List<Currency> currencies = databaseManager.selectAll();
-        JsonElement jsonTree = new Gson().toJsonTree(currencies);
+        List<Currency> currencies = databaseManager.findAll();
+        String json = new Gson().toJson(currencies);
         try (PrintWriter writer = response.getWriter()) {
-            writer.println(jsonTree);
+            writer.println(json);
             writer.flush();
         }
     }

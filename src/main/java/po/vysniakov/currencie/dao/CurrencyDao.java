@@ -1,7 +1,6 @@
 package po.vysniakov.currencie.dao;
 
-import po.vysniakov.currencie.Currency;
-import po.vysniakov.currencie.db.DatabaseManager;
+import po.vysniakov.db.DatabaseManager;
 
 import java.util.List;
 
@@ -15,6 +14,6 @@ public class CurrencyDao implements Dao<Currency> {
 
     @Override
     public List<Currency> getAll() {
-        return databaseManager.selectAll();
+        return databaseManager.findAll();
     }
 }
