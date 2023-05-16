@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @WebServlet("/currencies")
 public class CurrenciesServlet extends HttpServlet {
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         DatabaseManager databaseManager = new SQLiteDatabaseManager();
@@ -30,12 +30,12 @@ public class CurrenciesServlet extends HttpServlet {
     }
 
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         String[] params = readBodyParameters(req);
         if (!validateParameters(params)) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "You need to put 3 parameters");
+            sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "You need to put 3 parameters");
         } else {
             DatabaseManager databaseManager = new SQLiteDatabaseManager();
             Currency newCurrency = createCurrencyFromParameters(params);
@@ -44,8 +44,16 @@ public class CurrenciesServlet extends HttpServlet {
                 String json = new Gson().toJson(savedCurrency);
                 writeJsonToResponse(resp, json);
             } catch (RuntimeException e) {
-                resp.sendError(HttpServletResponse.SC_CONFLICT, "Cannot add currency, with same code");
+                sendError(resp, HttpServletResponse.SC_CONFLICT, "Cannot add currency, with same code");
             }
+        }
+    }
+
+    private static void sendError(HttpServletResponse resp, int code, String message) {
+        try {
+            resp.sendError(code, message);
+        } catch (IOException e) {
+            throw new RuntimeException("Exception while sending error through response", e);
         }
     }
 
@@ -80,7 +88,7 @@ public class CurrenciesServlet extends HttpServlet {
             writer.println(json);
             writer.flush();
         } catch (IOException e) {
-            throw new RuntimeException("Cannot get response writer", e);
+            throw new RuntimeException("Cannot get print writer", e);
         }
     }
 }
