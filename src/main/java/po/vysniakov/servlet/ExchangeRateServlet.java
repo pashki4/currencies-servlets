@@ -23,5 +23,6 @@ public class ExchangeRateServlet extends HttpServlet {
         String[] split = pathInfo.split("/");
         //Currency CODE length = 3
 
+
     }
 }

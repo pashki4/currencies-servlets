@@ -5,6 +5,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import po.vysniakov.exception.ExchangeRatesServletOperationException;
 import po.vysniakov.model.ExchangeRate;
 import po.vysniakov.repositories.CrudRepository;
 import po.vysniakov.repositories.ExchangeRateRepository;
@@ -30,7 +31,7 @@ public class ExchangeRatesServlet extends HttpServlet {
             writer.println(json);
             writer.flush();
         } catch (IOException e) {
-            throw new RuntimeException("Cannot get print writer", e);
+            throw new ExchangeRatesServletOperationException("Cannot get print writer", e);
         }
     }
 }

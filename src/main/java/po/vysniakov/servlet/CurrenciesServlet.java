@@ -5,6 +5,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import po.vysniakov.exception.CurrenciesServletOperationException;
 import po.vysniakov.model.Currency;
 import po.vysniakov.repositories.CrudRepository;
 import po.vysniakov.repositories.CurrencyRepository;
@@ -54,7 +55,7 @@ public class CurrenciesServlet extends HttpServlet {
         try {
             resp.sendError(code, message);
         } catch (IOException e) {
-            throw new RuntimeException("Exception while sending error through response", e);
+            throw new CurrenciesServletOperationException("Exception while sending error through response", e);
         }
     }
 
@@ -63,7 +64,7 @@ public class CurrenciesServlet extends HttpServlet {
             String collected = reader.lines().collect(Collectors.joining());
             return collected.split("&");
         } catch (IOException e) {
-            throw new RuntimeException("Cannot get reader for request: " + req, e);
+            throw new CurrenciesServletOperationException("Cannot get reader for request: " + req, e);
         }
     }
 
@@ -89,7 +90,7 @@ public class CurrenciesServlet extends HttpServlet {
             writer.println(json);
             writer.flush();
         } catch (IOException e) {
-            throw new RuntimeException("Cannot get print writer", e);
+            throw new CurrenciesServletOperationException("Cannot get print writer", e);
         }
     }
 }
