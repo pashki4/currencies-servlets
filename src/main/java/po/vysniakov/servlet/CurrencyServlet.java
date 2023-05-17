@@ -17,7 +17,7 @@ import java.util.Optional;
 public class CurrencyServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
-        CrudRepository crudRepository = new CurrencyRepository();
+        CrudRepository<Currency> crudRepository = new CurrencyRepository();
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         Optional<String> currency = getRequestedCurrency(req);

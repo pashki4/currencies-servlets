@@ -15,34 +15,30 @@ import static po.vysniakov.util.PropertiesUtil.get;
 public class CurrencyRepository implements CrudRepository<Currency> {
 
     private static final String URL = "jdbc:sqlite:" + get("db.url") + get("db.name");
-    private static final String SELECT_CURRENCIES_SQL = "SELECT * FROM currencies;";
-    private static final String SELECT_CURRENCY_SQL = "SELECT * FROM currencies WHERE code = ?;";
+    private static final String FIND_CURRENCIES_SQL = "SELECT * FROM currencies;";
+    private static final String FIND_CURRENCY_SQL = "SELECT * FROM currencies WHERE code = ?;";
     private static final String INSERT_CURRENCY_SQL = "INSERT INTO currencies (code, full_name, sign) VALUES (?, ?, ?);";
 
     @Override
     public List<Currency> findAll() {
-        return findCurrencies();
-    }
-
-    private List<Currency> findCurrencies() {
         try (Connection connection = DriverManager.getConnection(URL)) {
-            PreparedStatement preparedSelectStatement = prepareSelectAllStatement(connection);
-            return getCurrencies(preparedSelectStatement);
+            PreparedStatement preparedFindStatement = prepareFindAllStatement(connection);
+            return getCurrencies(preparedFindStatement);
         } catch (SQLException e) {
             throw new ConnectionException("Cannot create connection for URL: " + URL, e);
         }
     }
 
-    private PreparedStatement prepareSelectAllStatement(Connection connection) {
+    private PreparedStatement prepareFindAllStatement(Connection connection) {
         try {
-            return connection.prepareStatement(SELECT_CURRENCIES_SQL);
+            return connection.prepareStatement(FIND_CURRENCIES_SQL);
         } catch (SQLException e) {
-            throw new PrepareStatementException("Cannot prepare select statement for query: " + SELECT_CURRENCIES_SQL, e);
+            throw new PrepareStatementException("Cannot prepare find statement for: " + FIND_CURRENCIES_SQL, e);
         }
     }
 
-    private List<Currency> getCurrencies(PreparedStatement preparedSelectStatement) throws SQLException {
-        ResultSet resultSet = preparedSelectStatement.executeQuery();
+    private List<Currency> getCurrencies(PreparedStatement preparedFindStatement) throws SQLException {
+        ResultSet resultSet = preparedFindStatement.executeQuery();
         return collectToList(resultSet);
     }
 
@@ -69,26 +65,26 @@ public class CurrencyRepository implements CrudRepository<Currency> {
     }
 
     private Optional<Currency> findCurrency(Connection connection, String code) throws SQLException {
-        PreparedStatement preparedFindStatement = prepareSelectOneStatement(connection, code);
+        PreparedStatement preparedFindStatement = prepareFindOneStatement(connection, code);
         return mapCurrency(preparedFindStatement);
     }
 
-    private PreparedStatement prepareSelectOneStatement(Connection connection, String code) {
+    private PreparedStatement prepareFindOneStatement(Connection connection, String code) {
         try {
-            PreparedStatement selectOneStatement = connection.prepareStatement(SELECT_CURRENCY_SQL);
-            fillSelectOneStatement(selectOneStatement, code);
-            return selectOneStatement;
+            PreparedStatement findOneStatement = connection.prepareStatement(FIND_CURRENCY_SQL);
+            fillFindOneStatement(findOneStatement, code);
+            return findOneStatement;
         } catch (SQLException e) {
-            throw new PrepareStatementException("Cannot prepare select statement for query: " + SELECT_CURRENCY_SQL, e);
+            throw new PrepareStatementException("Cannot prepare find statement for query: " + FIND_CURRENCY_SQL, e);
         }
     }
 
-    private void fillSelectOneStatement(PreparedStatement selectOneStatement, String code) throws SQLException {
-        selectOneStatement.setString(1, code);
+    private void fillFindOneStatement(PreparedStatement findOneStatement, String code) throws SQLException {
+        findOneStatement.setString(1, code);
     }
 
-    private Optional<Currency> mapCurrency(PreparedStatement selectOneStatement) throws SQLException {
-        ResultSet resultSet = selectOneStatement.executeQuery();
+    private Optional<Currency> mapCurrency(PreparedStatement findOneStatement) throws SQLException {
+        ResultSet resultSet = findOneStatement.executeQuery();
         if (resultSet.next()) {
             Currency currency = new Currency();
             currency.setId(resultSet.getLong("id"));
