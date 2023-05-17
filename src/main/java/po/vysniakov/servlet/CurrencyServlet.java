@@ -21,17 +21,19 @@ public class CurrencyServlet extends HttpServlet {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         Optional<String> currency = getRequestedCurrency(req);
+
         if (currency.isEmpty()) {
             sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Code cannot be empty ../currency/{currencyCode}");
-        } else {
-            Optional<Currency> foundCurrency = crudRepository.findOne(currency.get());
-            foundCurrency.ifPresentOrElse(c -> {
-                        String currencyJson = new Gson().toJson(c);
-                        writeJsonToResponse(resp, currencyJson);
-                    }, () -> sendError(resp, HttpServletResponse.SC_NOT_FOUND,
-                            "There is no data about " + currency.get())
-            );
+            return;
         }
+
+        Optional<Currency> foundCurrency = crudRepository.findOne(currency.get());
+        foundCurrency.ifPresentOrElse(c -> {
+                    String currencyJson = new Gson().toJson(c);
+                    writeJsonToResponse(resp, currencyJson);
+                }, () -> sendError(resp, HttpServletResponse.SC_NOT_FOUND,
+                        "There is no data about the " + currency.get())
+        );
     }
 
     private static void writeJsonToResponse(HttpServletResponse resp, String json) {

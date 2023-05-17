@@ -1,9 +1,8 @@
 package po.vysniakov.repositories;
 
+import org.sqlite.SQLiteConfig;
+import po.vysniakov.exception.RepositoryOperationException;
 import po.vysniakov.model.Currency;
-import po.vysniakov.exception.ConnectionException;
-import po.vysniakov.exception.PrepareStatementException;
-import po.vysniakov.exception.SaveException;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -18,6 +17,7 @@ public class CurrencyRepository implements CrudRepository<Currency> {
     private static final String FIND_CURRENCIES_SQL = "SELECT * FROM currencies;";
     private static final String FIND_CURRENCY_SQL = "SELECT * FROM currencies WHERE code = ?;";
     private static final String INSERT_CURRENCY_SQL = "INSERT INTO currencies (code, full_name, sign) VALUES (?, ?, ?);";
+    private static final String CONNECTION_EXCEPTION = "Cannot create connection for URL: ";
 
     @Override
     public List<Currency> findAll() {
@@ -25,15 +25,21 @@ public class CurrencyRepository implements CrudRepository<Currency> {
             PreparedStatement preparedFindStatement = prepareFindAllStatement(connection);
             return getCurrencies(preparedFindStatement);
         } catch (SQLException e) {
-            throw new ConnectionException("Cannot create connection for URL: " + URL, e);
+            throw new RepositoryOperationException(CONNECTION_EXCEPTION + URL, e);
         }
+    }
+
+    private static SQLiteConfig getSqLiteConfig() {
+        SQLiteConfig config = new SQLiteConfig();
+        config.enforceForeignKeys(true);
+        return config;
     }
 
     private PreparedStatement prepareFindAllStatement(Connection connection) {
         try {
             return connection.prepareStatement(FIND_CURRENCIES_SQL);
         } catch (SQLException e) {
-            throw new PrepareStatementException("Cannot prepare find statement for: " + FIND_CURRENCIES_SQL, e);
+            throw new RepositoryOperationException("Cannot prepare find statement for: " + FIND_CURRENCIES_SQL, e);
         }
     }
 
@@ -60,7 +66,7 @@ public class CurrencyRepository implements CrudRepository<Currency> {
         try (Connection connection = DriverManager.getConnection(URL)) {
             return findCurrency(connection, name);
         } catch (SQLException e) {
-            throw new ConnectionException("Cannot create connection for URL: " + URL, e);
+            throw new RepositoryOperationException(CONNECTION_EXCEPTION + URL, e);
         }
     }
 
@@ -75,7 +81,7 @@ public class CurrencyRepository implements CrudRepository<Currency> {
             fillFindOneStatement(findOneStatement, code);
             return findOneStatement;
         } catch (SQLException e) {
-            throw new PrepareStatementException("Cannot prepare find statement for query: " + FIND_CURRENCY_SQL, e);
+            throw new RepositoryOperationException("Cannot prepare find statement for query: " + FIND_CURRENCY_SQL, e);
         }
     }
 
@@ -98,10 +104,11 @@ public class CurrencyRepository implements CrudRepository<Currency> {
 
     @Override
     public Currency save(Currency currency) {
-        try (Connection connection = DriverManager.getConnection(URL)) {
+        SQLiteConfig config = getSqLiteConfig();
+        try (Connection connection = DriverManager.getConnection(URL, config.toProperties())) {
             return saveCurrency(connection, currency);
         } catch (SQLException e) {
-            throw new ConnectionException("Cannot create connection for URL: " + URL, e);
+            throw new RepositoryOperationException(CONNECTION_EXCEPTION + URL, e);
         }
     }
 
@@ -112,15 +119,14 @@ public class CurrencyRepository implements CrudRepository<Currency> {
             fillInsertStatement(prepareInsertStatement, currency);
             int rows = prepareInsertStatement.executeUpdate();
             if (rows == 0) {
-                throw new SaveException("Currency with code: " + currency.getCode()
+                throw new RepositoryOperationException("Currency with code: " + currency.getCode()
                         + " already exists");
-            } else {
-                Long generatedKey = extractGeneratedKey(prepareInsertStatement);
-                currency.setId(generatedKey);
-                return currency;
             }
+            Long generatedKey = extractGeneratedKey(prepareInsertStatement);
+            currency.setId(generatedKey);
+            return currency;
         } catch (SQLException e) {
-            throw new PrepareStatementException("Cannot prepare statement for: " + INSERT_CURRENCY_SQL, e);
+            throw new RepositoryOperationException("Cannot prepare statement for: " + INSERT_CURRENCY_SQL, e);
         }
     }
 

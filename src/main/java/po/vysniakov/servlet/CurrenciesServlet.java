@@ -33,18 +33,20 @@ public class CurrenciesServlet extends HttpServlet {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         String[] params = readBodyParameters(req);
+
         if (!validateParameters(params)) {
             sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "You need to put 3 parameters");
-        } else {
-            CrudRepository<Currency> currencyRepository = new CurrencyRepository();
-            Currency newCurrency = createCurrencyFromParameters(params);
-            try {
-                Currency savedCurrency = currencyRepository.save(newCurrency);
-                String json = new Gson().toJson(savedCurrency);
-                writeJsonToResponse(resp, json);
-            } catch (RuntimeException e) {
-                sendError(resp, HttpServletResponse.SC_CONFLICT, "Cannot add currency, with same code");
-            }
+            return;
+        }
+
+        CrudRepository<Currency> currencyRepository = new CurrencyRepository();
+        Currency newCurrency = createCurrencyFromParameters(params);
+        try {
+            Currency savedCurrency = currencyRepository.save(newCurrency);
+            String json = new Gson().toJson(savedCurrency);
+            writeJsonToResponse(resp, json);
+        } catch (RuntimeException e) {
+            sendError(resp, HttpServletResponse.SC_CONFLICT, "Code: " + newCurrency.getCode() + " exists");
         }
     }
 

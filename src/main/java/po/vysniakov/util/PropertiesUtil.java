@@ -7,7 +7,6 @@ import java.util.Properties;
 
 public class PropertiesUtil {
     private static final Properties PROPERTIES = new Properties();
-    private static final String properties = "application.properties";
 
     private PropertiesUtil() {
         throw new UnsupportedOperationException("Util class");
@@ -23,10 +22,10 @@ public class PropertiesUtil {
 
     private static void loadProperties() {
         try (var input = PropertiesUtil.class
-                .getClassLoader().getResourceAsStream(properties)) {
+                .getClassLoader().getResourceAsStream("application.properties")) {
             PROPERTIES.load(input);
         } catch (IOException e) {
-            throw new LoadPropertiesException("Can't load properties from: " + properties, e);
+            throw new LoadPropertiesException("Can't load properties", e);
         }
     }
 }

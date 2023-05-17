@@ -1,7 +1,7 @@
 package po.vysniakov.repositories;
 
-import po.vysniakov.exception.ConnectionException;
-import po.vysniakov.exception.PrepareStatementException;
+import org.sqlite.SQLiteConfig;
+import po.vysniakov.exception.RepositoryOperationException;
 import po.vysniakov.model.Currency;
 import po.vysniakov.model.ExchangeRate;
 
@@ -27,7 +27,7 @@ public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
             ResultSet resultSet = findAllStatement.executeQuery();
             return collectToList(resultSet);
         } catch (SQLException e) {
-            throw new ConnectionException("Cannot create connection for URL: " + URL, e);
+            throw new RepositoryOperationException("Cannot create connection for URL: " + URL, e);
         }
     }
 
@@ -60,7 +60,7 @@ public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
         try {
             return connection.prepareStatement(FIND_EXCHANGE_RATES_SQL);
         } catch (SQLException e) {
-            throw new PrepareStatementException("Cannot prepare find statement for: " + FIND_EXCHANGE_RATES_SQL, e);
+            throw new RepositoryOperationException("Cannot prepare find statement for: " + FIND_EXCHANGE_RATES_SQL, e);
         }
     }
 
@@ -71,6 +71,14 @@ public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
 
     @Override
     public ExchangeRate save(Currency currency) {
+        //TODO insert config.toProperties in DriverManager.getConnection(URL, config.toProperties())
+        SQLiteConfig config = getSqLiteConfig();
         return null;
+    }
+
+    private static SQLiteConfig getSqLiteConfig() {
+        SQLiteConfig config = new SQLiteConfig();
+        config.enforceForeignKeys(true);
+        return config;
     }
 }
