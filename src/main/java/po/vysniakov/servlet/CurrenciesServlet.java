@@ -1,14 +1,13 @@
 package po.vysniakov.servlet;
 
 import com.google.gson.Gson;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import po.vysniakov.currencie.dao.Currency;
-import po.vysniakov.db.DatabaseManager;
-import po.vysniakov.db.SQLiteDatabaseManager;
+import po.vysniakov.model.Currency;
+import po.vysniakov.repositories.CrudRepository;
+import po.vysniakov.repositories.CurrencyRepository;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -23,8 +22,8 @@ public class CurrenciesServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
-        DatabaseManager databaseManager = new SQLiteDatabaseManager();
-        List<Currency> currencies = databaseManager.findAll();
+        CrudRepository<Currency> currencyRepository = new CurrencyRepository();
+        List<Currency> currencies = currencyRepository.findAll();
         String json = new Gson().toJson(currencies);
         writeJsonToResponse(resp, json);
     }
@@ -37,10 +36,10 @@ public class CurrenciesServlet extends HttpServlet {
         if (!validateParameters(params)) {
             sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "You need to put 3 parameters");
         } else {
-            DatabaseManager databaseManager = new SQLiteDatabaseManager();
+            CrudRepository<Currency> currencyRepository = new CurrencyRepository();
             Currency newCurrency = createCurrencyFromParameters(params);
             try {
-                Currency savedCurrency = databaseManager.save(newCurrency);
+                Currency savedCurrency = currencyRepository.save(newCurrency);
                 String json = new Gson().toJson(savedCurrency);
                 writeJsonToResponse(resp, json);
             } catch (RuntimeException e) {

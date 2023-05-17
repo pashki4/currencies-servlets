@@ -5,9 +5,9 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import po.vysniakov.currencie.dao.Currency;
-import po.vysniakov.db.DatabaseManager;
-import po.vysniakov.db.SQLiteDatabaseManager;
+import po.vysniakov.model.Currency;
+import po.vysniakov.repositories.CrudRepository;
+import po.vysniakov.repositories.CurrencyRepository;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -17,14 +17,14 @@ import java.util.Optional;
 public class CurrencyServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
-        DatabaseManager databaseManager = new SQLiteDatabaseManager();
+        CrudRepository crudRepository = new CurrencyRepository();
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         Optional<String> currency = getRequestedCurrency(req);
         if (currency.isEmpty()) {
             sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Code cannot be empty ../currency/{currencyCode}");
         } else {
-            Optional<Currency> foundCurrency = databaseManager.findOne(currency.get());
+            Optional<Currency> foundCurrency = crudRepository.findOne(currency.get());
             foundCurrency.ifPresentOrElse(c -> {
                         String currencyJson = new Gson().toJson(c);
                         writeJsonToResponse(resp, currencyJson);

@@ -1,4 +1,4 @@
-package po.vysniakov.currencie.dao;
+package po.vysniakov.model;
 
 public class Currency {
     private Long id;

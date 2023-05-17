@@ -1,9 +1,9 @@
-package po.vysniakov.db;
+package po.vysniakov.repositories;
 
-import po.vysniakov.currencie.dao.Currency;
+import po.vysniakov.model.Currency;
 import po.vysniakov.exception.ConnectionException;
-import po.vysniakov.exception.SaveException;
 import po.vysniakov.exception.PrepareStatementException;
+import po.vysniakov.exception.SaveException;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -12,11 +12,11 @@ import java.util.Optional;
 
 import static po.vysniakov.util.PropertiesUtil.get;
 
-public class SQLiteDatabaseManager implements DatabaseManager {
+public class CurrencyRepository implements CrudRepository<Currency> {
 
     private static final String URL = "jdbc:sqlite:" + get("db.url") + get("db.name");
-    private static final String SELECT_ALL_SQL = "SELECT * FROM currencies;";
-    private static final String SELECT_ONE_SQL = "SELECT * FROM currencies WHERE code = ?;";
+    private static final String SELECT_CURRENCIES_SQL = "SELECT * FROM currencies;";
+    private static final String SELECT_CURRENCY_SQL = "SELECT * FROM currencies WHERE code = ?;";
     private static final String INSERT_CURRENCY_SQL = "INSERT INTO currencies (code, full_name, sign) VALUES (?, ?, ?);";
 
     @Override
@@ -35,9 +35,9 @@ public class SQLiteDatabaseManager implements DatabaseManager {
 
     private PreparedStatement prepareSelectAllStatement(Connection connection) {
         try {
-            return connection.prepareStatement(SELECT_ALL_SQL);
+            return connection.prepareStatement(SELECT_CURRENCIES_SQL);
         } catch (SQLException e) {
-            throw new PrepareStatementException("Cannot prepare select statement for query: " + SELECT_ALL_SQL, e);
+            throw new PrepareStatementException("Cannot prepare select statement for query: " + SELECT_CURRENCIES_SQL, e);
         }
     }
 
@@ -75,11 +75,11 @@ public class SQLiteDatabaseManager implements DatabaseManager {
 
     private PreparedStatement prepareSelectOneStatement(Connection connection, String code) {
         try {
-            PreparedStatement selectOneStatement = connection.prepareStatement(SELECT_ONE_SQL);
+            PreparedStatement selectOneStatement = connection.prepareStatement(SELECT_CURRENCY_SQL);
             fillSelectOneStatement(selectOneStatement, code);
             return selectOneStatement;
         } catch (SQLException e) {
-            throw new PrepareStatementException("Cannot prepare select statement for query: " + SELECT_ONE_SQL, e);
+            throw new PrepareStatementException("Cannot prepare select statement for query: " + SELECT_CURRENCY_SQL, e);
         }
     }
 
