@@ -33,15 +33,15 @@ public class CurrenciesServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
-        String[] params = readBodyParameters(req);
+        String[] bodyParameters = readBodyParameters(req);
 
-        if (!validateParameters(params)) {
+        if (!validateParameters(bodyParameters)) {
             sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "You need to put 3 parameters");
             return;
         }
 
         CrudRepository<Currency> currencyRepository = new CurrencyRepository();
-        Currency newCurrency = createCurrencyFromParameters(params);
+        Currency newCurrency = createCurrencyFromParameters(bodyParameters);
         try {
             Currency savedCurrency = currencyRepository.save(newCurrency);
             String json = new Gson().toJson(savedCurrency);

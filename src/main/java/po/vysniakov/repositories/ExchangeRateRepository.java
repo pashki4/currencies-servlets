@@ -4,6 +4,7 @@ import org.sqlite.SQLiteConfig;
 import po.vysniakov.exception.RepositoryOperationException;
 import po.vysniakov.model.Currency;
 import po.vysniakov.model.ExchangeRate;
+import po.vysniakov.util.ExchangeRateUtil;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -20,6 +21,13 @@ public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
             "LEFT JOIN currencies b ON er.base_currency_id = b.id " +
             "LEFT JOIN currencies t ON er.target_currency_id = t.id;";
 
+    private static final String FIND_EXCHANGE_RATE_SQL = "SELECT b.id, b.code, b.full_name, b.sign, " +
+            "t.id, t.code, t.full_name, t.sign, er.rate " +
+            "FROM ExchangeRates er " +
+            "LEFT JOIN currencies b ON er.base_currency_id = b.id " +
+            "LEFT JOIN currencies t ON er.target_currency_id = t.id " +
+            "WHERE b.code = ? AND t.code = ?";
+
     @Override
     public List<ExchangeRate> findAll() {
         try (Connection connection = DriverManager.getConnection(URL)) {
@@ -34,24 +42,8 @@ public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
     private List<ExchangeRate> collectToList(ResultSet resultSet) throws SQLException {
         List<ExchangeRate> result = new ArrayList<>();
         while (resultSet.next()) {
-            ExchangeRate exchangeRate = new ExchangeRate();
-
-            Currency baseCurrency = new Currency();
-            baseCurrency.setId(resultSet.getLong(1));
-            baseCurrency.setCode(resultSet.getString(2));
-            baseCurrency.setName(resultSet.getString(3));
-            baseCurrency.setSign(resultSet.getString(4));
-
-            Currency targetCurrency = new Currency();
-            targetCurrency.setId(resultSet.getLong(5));
-            targetCurrency.setCode(resultSet.getString(6));
-            targetCurrency.setName(resultSet.getString(7));
-            targetCurrency.setSign(resultSet.getString(8));
-
-            exchangeRate.setBaseCurrency(baseCurrency);
-            exchangeRate.setTargetCurrency(targetCurrency);
-            exchangeRate.setRate(resultSet.getDouble(9));
-            result.add(exchangeRate);
+            Optional<ExchangeRate> rate = parseExchangeRate(resultSet);
+            result.add(rate.get());
         }
         return result;
     }
@@ -65,8 +57,53 @@ public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
     }
 
     @Override
-    public Optional<ExchangeRate> findOne(String name) {
-        return Optional.empty();
+    public Optional<ExchangeRate> findOne(String pair) {
+        try (Connection connection = DriverManager.getConnection(URL)) {
+            return findExchangeRate(connection, pair);
+        } catch (SQLException e) {
+            throw new RepositoryOperationException("Cannot create connection by URL: " + URL, e);
+        }
+    }
+
+    private Optional<ExchangeRate> findExchangeRate(Connection connection, String pair) {
+        try {
+            PreparedStatement findExchangeRateStatement = connection.prepareStatement(FIND_EXCHANGE_RATE_SQL);
+            fillFindExchangeRateStatement(findExchangeRateStatement, pair);
+            ResultSet resultSet = findExchangeRateStatement.executeQuery();
+            if (resultSet.next()) {
+                return parseExchangeRate(resultSet);
+            }
+            return Optional.empty();
+        } catch (SQLException e) {
+            throw new RepositoryOperationException("Cannot prepare findExchangeRate statement", e);
+        }
+    }
+
+    private void fillFindExchangeRateStatement(PreparedStatement preparedStatement, String pair) throws SQLException {
+        List<String> pairs = ExchangeRateUtil.splitPairByCode(pair);
+        preparedStatement.setString(1, pairs.get(0));
+        preparedStatement.setString(2, pairs.get(1));
+    }
+
+    private Optional<ExchangeRate> parseExchangeRate(ResultSet resultSet) throws SQLException {
+        ExchangeRate exchangeRate = new ExchangeRate();
+
+        Currency baseCurrency = new Currency();
+        baseCurrency.setId(resultSet.getLong(1));
+        baseCurrency.setCode(resultSet.getString(2));
+        baseCurrency.setName(resultSet.getString(3));
+        baseCurrency.setSign(resultSet.getString(4));
+
+        Currency targetCurrency = new Currency();
+        targetCurrency.setId(resultSet.getLong(5));
+        targetCurrency.setCode(resultSet.getString(6));
+        targetCurrency.setName(resultSet.getString(7));
+        targetCurrency.setSign(resultSet.getString(8));
+
+        exchangeRate.setBaseCurrency(baseCurrency);
+        exchangeRate.setTargetCurrency(targetCurrency);
+        exchangeRate.setRate(resultSet.getDouble(9));
+        return Optional.of(exchangeRate);
     }
 
     @Override
