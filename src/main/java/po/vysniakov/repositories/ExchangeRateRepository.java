@@ -30,6 +30,11 @@ public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
 
     @Override
     public List<ExchangeRate> findAll() {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         try (Connection connection = DriverManager.getConnection(URL)) {
             PreparedStatement findAllStatement = prepareFindAllStatement(connection);
             ResultSet resultSet = findAllStatement.executeQuery();
@@ -58,6 +63,11 @@ public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
 
     @Override
     public Optional<ExchangeRate> findOne(String pair) {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         try (Connection connection = DriverManager.getConnection(URL)) {
             return findExchangeRate(connection, pair);
         } catch (SQLException e) {

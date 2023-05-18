@@ -10,7 +10,7 @@ public class ExchangeRateUtil {
         int index = 0;
         while (index < pair.length()) {
             result.add(pair.substring(index, Math.min(index + 3, pair.length())));
-            index += 4;
+            index += 3;
         }
         return result;
     }

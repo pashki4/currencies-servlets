@@ -21,6 +21,11 @@ public class CurrencyRepository implements CrudRepository<Currency> {
 
     @Override
     public List<Currency> findAll() {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         try (Connection connection = DriverManager.getConnection(URL)) {
             PreparedStatement preparedFindStatement = prepareFindAllStatement(connection);
             return getCurrencies(preparedFindStatement);
@@ -63,6 +68,11 @@ public class CurrencyRepository implements CrudRepository<Currency> {
 
     @Override
     public Optional<Currency> findOne(String name) {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         try (Connection connection = DriverManager.getConnection(URL)) {
             return findCurrency(connection, name);
         } catch (SQLException e) {
@@ -104,6 +114,11 @@ public class CurrencyRepository implements CrudRepository<Currency> {
 
     @Override
     public Currency save(Currency currency) {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         SQLiteConfig config = getSqLiteConfig();
         try (Connection connection = DriverManager.getConnection(URL, config.toProperties())) {
             return saveCurrency(connection, currency);
