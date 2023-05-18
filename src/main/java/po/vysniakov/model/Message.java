@@ -1,9 +1,9 @@
 package po.vysniakov.model;
 
-public class ErrorMessage {
+public class Message {
     private final String message;
 
-    public ErrorMessage(String message) {
+    public Message(String message) {
         this.message = message;
     }
 }

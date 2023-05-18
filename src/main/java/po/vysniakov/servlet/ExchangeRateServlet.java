@@ -6,7 +6,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import po.vysniakov.exception.ExchangeRateServletOperationException;
-import po.vysniakov.model.ErrorMessage;
+import po.vysniakov.model.Message;
 import po.vysniakov.model.ExchangeRate;
 import po.vysniakov.repositories.CrudRepository;
 import po.vysniakov.repositories.ExchangeRateRepository;
@@ -23,24 +23,24 @@ public class ExchangeRateServlet extends HttpServlet {
         resp.setCharacterEncoding("UTF-8");
         Optional<String> requestedCurrencyPair = getRequestedCurrencyPair(req);
         if (requestedCurrencyPair.isEmpty() || requestedCurrencyPair.get().length() != 6) {
-            String error = new Gson().toJson(new ErrorMessage("Bad request"));
-            setCodeAndWriteJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, error);
+            String error = new Gson().toJson(new Message("Bad request"));
+            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, error);
             return;
         }
 
         CrudRepository<ExchangeRate> repository = new ExchangeRateRepository();
         Optional<ExchangeRate> rate = repository.findOne(requestedCurrencyPair.get());
         if (rate.isEmpty()) {
-            String error = new Gson().toJson(new ErrorMessage("The exchange rate was not found"));
-            setCodeAndWriteJsonToResponse(resp, HttpServletResponse.SC_NOT_FOUND, error);
+            String error = new Gson().toJson(new Message("The exchange rate was not found"));
+            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_NOT_FOUND, error);
             return;
         }
 
         String json = new Gson().toJson(rate.get());
-        setCodeAndWriteJsonToResponse(resp, HttpServletResponse.SC_OK, json);
+        setCodeAndJsonToResponse(resp, HttpServletResponse.SC_OK, json);
     }
 
-    private void setCodeAndWriteJsonToResponse(HttpServletResponse resp, int code, String json) {
+    private void setCodeAndJsonToResponse(HttpServletResponse resp, int code, String json) {
         resp.setStatus(code);
         try {
             PrintWriter writer = resp.getWriter();

@@ -6,13 +6,16 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import po.vysniakov.exception.CurrenciesServletOperationException;
+import po.vysniakov.exception.ExchangeRateServletOperationException;
 import po.vysniakov.model.Currency;
+import po.vysniakov.model.Message;
 import po.vysniakov.repositories.CrudRepository;
 import po.vysniakov.repositories.CurrencyRepository;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,8 +28,9 @@ public class CurrenciesServlet extends HttpServlet {
         resp.setCharacterEncoding("UTF-8");
         CrudRepository<Currency> currencyRepository = new CurrencyRepository();
         List<Currency> currencies = currencyRepository.findAll();
+
         String json = new Gson().toJson(currencies);
-        writeJsonToResponse(resp, json);
+        setCodeAndJsonToResponse(resp, HttpServletResponse.SC_OK, json);
     }
 
     @Override
@@ -36,26 +40,20 @@ public class CurrenciesServlet extends HttpServlet {
         String[] bodyParameters = readBodyParameters(req);
 
         if (!validateParameters(bodyParameters)) {
-            sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "You need to put 3 parameters");
+            String json = new Gson().toJson(new Message("You need to put 3 parameters: code, name, sign"));
+            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, json);
             return;
         }
 
-        CrudRepository<Currency> currencyRepository = new CurrencyRepository();
         Currency newCurrency = createCurrencyFromParameters(bodyParameters);
+        CrudRepository<Currency> currencyRepository = new CurrencyRepository();
         try {
             Currency savedCurrency = currencyRepository.save(newCurrency);
             String json = new Gson().toJson(savedCurrency);
-            writeJsonToResponse(resp, json);
+            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_OK, json);
         } catch (RuntimeException e) {
-            sendError(resp, HttpServletResponse.SC_CONFLICT, "Code: " + newCurrency.getCode() + " exists");
-        }
-    }
-
-    private static void sendError(HttpServletResponse resp, int code, String message) {
-        try {
-            resp.sendError(code, message);
-        } catch (IOException e) {
-            throw new CurrenciesServletOperationException("Exception while sending error through response", e);
+            String error = new Gson().toJson(new Error("Code: " + newCurrency.getCode() + " exists"));
+            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_CONFLICT, error);
         }
     }
 
@@ -82,15 +80,21 @@ public class CurrenciesServlet extends HttpServlet {
     }
 
     private boolean validateParameters(String[] params) {
-        return params.length == 3;
+        List<String> paramList = Arrays.asList("code", "name", "sign");
+        if (params.length != 3) {
+            return false;
+        }
+        return Arrays.asList(params).containsAll(paramList);
     }
 
-    private static void writeJsonToResponse(HttpServletResponse resp, String json) {
-        try (PrintWriter writer = resp.getWriter()) {
-            writer.println(json);
+    private void setCodeAndJsonToResponse(HttpServletResponse resp, int code, String json) {
+        resp.setStatus(code);
+        try {
+            PrintWriter writer = resp.getWriter();
+            writer.write(json);
             writer.flush();
         } catch (IOException e) {
-            throw new CurrenciesServletOperationException("Cannot get print writer", e);
+            throw new ExchangeRateServletOperationException("Cannot get response writer", e);
         }
     }
 }

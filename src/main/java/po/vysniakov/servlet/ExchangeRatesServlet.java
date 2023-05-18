@@ -5,7 +5,8 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import po.vysniakov.exception.ExchangeRatesServletOperationException;
+import po.vysniakov.exception.ExchangeRateServletOperationException;
+import po.vysniakov.model.Message;
 import po.vysniakov.model.ExchangeRate;
 import po.vysniakov.repositories.CrudRepository;
 import po.vysniakov.repositories.ExchangeRateRepository;
@@ -23,15 +24,17 @@ public class ExchangeRatesServlet extends HttpServlet {
         CrudRepository<ExchangeRate> repository = new ExchangeRateRepository();
         List<ExchangeRate> exchangeRates = repository.findAll();
         String json = new Gson().toJson(exchangeRates);
-        writeJsonToResponse(resp, json);
+        setCodeAndJsonToResponse(resp, HttpServletResponse.SC_OK, json);
     }
 
-    private static void writeJsonToResponse(HttpServletResponse resp, String json) {
-        try (PrintWriter writer = resp.getWriter()) {
-            writer.println(json);
+    private void setCodeAndJsonToResponse(HttpServletResponse resp, int code, String json) {
+        resp.setStatus(code);
+        try {
+            PrintWriter writer = resp.getWriter();
+            writer.write(json);
             writer.flush();
         } catch (IOException e) {
-            throw new ExchangeRatesServletOperationException("Cannot get print writer", e);
+            throw new ExchangeRateServletOperationException("Cannot get response writer", e);
         }
     }
 }
