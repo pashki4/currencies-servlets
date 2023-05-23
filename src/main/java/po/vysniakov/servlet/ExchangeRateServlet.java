@@ -6,10 +6,10 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import po.vysniakov.exception.ExchangeRateServletOperationException;
-import po.vysniakov.model.Message;
 import po.vysniakov.model.ExchangeRate;
-import po.vysniakov.repositories.CrudRepository;
-import po.vysniakov.repositories.ExchangeRateRepository;
+import po.vysniakov.model.Message;
+import po.vysniakov.repositories.JDBCExchangeRepository;
+import po.vysniakov.repositories.ExchangeRepository;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -28,8 +28,8 @@ public class ExchangeRateServlet extends HttpServlet {
             return;
         }
 
-        CrudRepository<ExchangeRate> repository = new ExchangeRateRepository();
-        Optional<ExchangeRate> rate = repository.findOne(requestedCurrencyPair.get());
+        ExchangeRepository repository = new JDBCExchangeRepository();
+        Optional<ExchangeRate> rate = repository.findPair(requestedCurrencyPair.get());
         if (rate.isEmpty()) {
             String error = new Gson().toJson(new Message("The exchange rate was not found"));
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_NOT_FOUND, error);

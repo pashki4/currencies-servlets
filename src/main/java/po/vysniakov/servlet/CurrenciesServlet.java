@@ -9,8 +9,8 @@ import po.vysniakov.exception.CurrenciesServletOperationException;
 import po.vysniakov.exception.ExchangeRateServletOperationException;
 import po.vysniakov.model.Currency;
 import po.vysniakov.model.Message;
-import po.vysniakov.repositories.CrudRepository;
 import po.vysniakov.repositories.CurrencyRepository;
+import po.vysniakov.repositories.JDBCCurrencyRepository;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,6 +18,7 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @WebServlet("/currencies")
@@ -26,7 +27,7 @@ public class CurrenciesServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
-        CrudRepository<Currency> currencyRepository = new CurrencyRepository();
+        CurrencyRepository currencyRepository = new JDBCCurrencyRepository();
         List<Currency> currencies = currencyRepository.findAll();
 
         String json = new Gson().toJson(currencies);
@@ -46,13 +47,13 @@ public class CurrenciesServlet extends HttpServlet {
         }
 
         Currency newCurrency = createCurrencyFromParameters(bodyParameters);
-        CrudRepository<Currency> currencyRepository = new CurrencyRepository();
+        CurrencyRepository currencyRepository = new JDBCCurrencyRepository();
         try {
             Currency savedCurrency = currencyRepository.save(newCurrency);
             String json = new Gson().toJson(savedCurrency);
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_OK, json);
         } catch (RuntimeException e) {
-            String error = new Gson().toJson(new Error("Code: " + newCurrency.getCode() + " exists"));
+            String error = new Gson().toJson(new Message(e.getMessage()));
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_CONFLICT, error);
         }
     }
@@ -84,7 +85,11 @@ public class CurrenciesServlet extends HttpServlet {
         if (params.length != 3) {
             return false;
         }
-        return Arrays.asList(params).containsAll(paramList);
+        List<String> split = Arrays.stream(params)
+                .flatMap(param -> Stream.of(param.split("=")))
+                .toList();
+
+        return split.containsAll(paramList);
     }
 
     private void setCodeAndJsonToResponse(HttpServletResponse resp, int code, String json) {

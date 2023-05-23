@@ -13,7 +13,7 @@ import java.util.Optional;
 
 import static po.vysniakov.util.PropertiesUtil.get;
 
-public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
+public class JDBCExchangeRepository implements ExchangeRepository {
     private static final String URL = "jdbc:sqlite:" + get("db.url") + get("db.name");
     private static final String FIND_EXCHANGE_RATES_SQL = "SELECT b.id, b.code, b.full_name, b.sign, " +
             "t.id, t.code, t.full_name, t.sign, er.rate " +
@@ -48,7 +48,7 @@ public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
         List<ExchangeRate> result = new ArrayList<>();
         while (resultSet.next()) {
             Optional<ExchangeRate> rate = parseExchangeRate(resultSet);
-            result.add(rate.get());
+            rate.ifPresent(result::add);
         }
         return result;
     }
@@ -62,7 +62,7 @@ public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
     }
 
     @Override
-    public Optional<ExchangeRate> findOne(String pair) {
+    public Optional<ExchangeRate> findPair(String pair) {
         try {
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException e) {
@@ -117,7 +117,7 @@ public class ExchangeRateRepository implements CrudRepository<ExchangeRate> {
     }
 
     @Override
-    public ExchangeRate save(Currency currency) {
+    public ExchangeRate save(ExchangeRate entity) {
         //TODO insert config.toProperties in DriverManager.getConnection(URL, config.toProperties())
         SQLiteConfig config = getSqLiteConfig();
         return null;

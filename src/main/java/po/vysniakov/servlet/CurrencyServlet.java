@@ -8,8 +8,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import po.vysniakov.exception.ExchangeRateServletOperationException;
 import po.vysniakov.model.Currency;
 import po.vysniakov.model.Message;
-import po.vysniakov.repositories.CrudRepository;
 import po.vysniakov.repositories.CurrencyRepository;
+import po.vysniakov.repositories.JDBCCurrencyRepository;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -19,7 +19,7 @@ import java.util.Optional;
 public class CurrencyServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
-        CrudRepository<Currency> crudRepository = new CurrencyRepository();
+        CurrencyRepository currencyRepository = new JDBCCurrencyRepository();
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         Optional<String> currency = getRequestedCurrency(req);
@@ -30,7 +30,7 @@ public class CurrencyServlet extends HttpServlet {
             return;
         }
 
-        Optional<Currency> foundCurrency = crudRepository.findOne(currency.get());
+        Optional<Currency> foundCurrency = currencyRepository.findByCode(currency.get());
         if (foundCurrency.isEmpty()) {
             String message = new Gson().toJson(new Message("There is no data about the " + currency.get()));
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_NOT_FOUND, message);
