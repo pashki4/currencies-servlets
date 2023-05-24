@@ -22,17 +22,17 @@ public class CurrencyServlet extends HttpServlet {
         CurrencyRepository currencyRepository = new JDBCCurrencyRepository();
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
-        Optional<String> currency = getRequestedCurrency(req);
+        Optional<String> requestedCurrency = getRequestedCurrency(req);
 
-        if (currency.isEmpty()) {
+        if (requestedCurrency.isEmpty()) {
             String message = new Gson().toJson(new Message("Code cannot be empty ../currency/{currencyCode}"));
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, message);
             return;
         }
 
-        Optional<Currency> foundCurrency = currencyRepository.findByCode(currency.get());
+        Optional<Currency> foundCurrency = currencyRepository.findByCode(requestedCurrency.get());
         if (foundCurrency.isEmpty()) {
-            String message = new Gson().toJson(new Message("There is no data about the " + currency.get()));
+            String message = new Gson().toJson(new Message("There is no data about the " + requestedCurrency.get()));
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_NOT_FOUND, message);
             return;
         }

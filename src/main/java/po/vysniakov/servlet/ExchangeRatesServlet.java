@@ -10,15 +10,15 @@ import po.vysniakov.exception.ExchangeRatesServletOperationException;
 import po.vysniakov.model.ExchangeRate;
 import po.vysniakov.model.Message;
 import po.vysniakov.repositories.CrudRepository;
-import po.vysniakov.repositories.JDBCExchangeRepository;
 import po.vysniakov.repositories.ExchangeRepository;
+import po.vysniakov.repositories.JDBCExchangeRepository;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @WebServlet(urlPatterns = "/exchangeRates")
 public class ExchangeRatesServlet extends HttpServlet {
@@ -37,7 +37,7 @@ public class ExchangeRatesServlet extends HttpServlet {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
 
-        String[] bodyParameters = readBodyParameters(req);
+        List<String> bodyParameters = readBodyParameters(req);
         if (!validateParameters(bodyParameters)) {
             String json = new Gson().toJson(new Message("You need to put 3 parameters: baseCurrencyCode," +
                     " targetCurrencyCode, rate"));
@@ -49,21 +49,25 @@ public class ExchangeRatesServlet extends HttpServlet {
 
     }
 
-    private String[] readBodyParameters(HttpServletRequest req) {
+    private List<String> readBodyParameters(HttpServletRequest req) {
         try (BufferedReader reader = req.getReader()) {
-            String collected = reader.lines().collect(Collectors.joining());
-            return collected.split("&");
+            return reader.lines()
+                    .flatMap(str -> Stream.of(str.split("&")))
+                    .toList();
         } catch (IOException e) {
             throw new ExchangeRatesServletOperationException("Cannot get reader for request: " + req, e);
         }
     }
 
-    private boolean validateParameters(String[] params) {
-        List<String> paramList = Arrays.asList("baseCurrencyCode", "targetCurrencyCode", "rate");
-        if (params.length != 3) {
+    private boolean validateParameters(List<String> params) {
+        List<String> requiredParameters = Arrays.asList("baseCurrencyCode", "targetCurrencyCode", "rate");
+        if (params.size() != 3) {
             return false;
         }
-        return Arrays.asList(params).containsAll(paramList);
+        List<String> enteredParams = params.stream()
+                .flatMap(keyValue -> Stream.of(keyValue.split("=")))
+                .toList();
+        return enteredParams.containsAll(requiredParameters);
     }
 
     private void setCodeAndJsonToResponse(HttpServletResponse resp, int code, String json) {
