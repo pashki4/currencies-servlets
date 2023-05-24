@@ -7,17 +7,20 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import po.vysniakov.exception.ExchangeRateServletOperationException;
 import po.vysniakov.exception.ExchangeRatesServletOperationException;
+import po.vysniakov.model.Currency;
 import po.vysniakov.model.ExchangeRate;
 import po.vysniakov.model.Message;
-import po.vysniakov.repositories.CrudRepository;
+import po.vysniakov.repositories.CurrencyRepository;
 import po.vysniakov.repositories.ExchangeRepository;
+import po.vysniakov.repositories.JDBCCurrencyRepository;
 import po.vysniakov.repositories.JDBCExchangeRepository;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.List;
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @WebServlet(urlPatterns = "/exchangeRates")
@@ -37,37 +40,67 @@ public class ExchangeRatesServlet extends HttpServlet {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
 
-        List<String> bodyParameters = readBodyParameters(req);
+        Map<String, String> bodyParameters = getBodyParameters(req);
         if (!validateParameters(bodyParameters)) {
             String json = new Gson().toJson(new Message("You need to put 3 parameters: baseCurrencyCode," +
                     " targetCurrencyCode, rate"));
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, json);
             return;
         }
-        CrudRepository<ExchangeRate> repository = new JDBCExchangeRepository();
+
+        String baseCurrencyCode = bodyParameters.get("baseCurrencyCode");
+        CurrencyRepository currencyRepository = new JDBCCurrencyRepository();
+        Optional<Currency> baseCurrency = currencyRepository.findByCode(baseCurrencyCode);
+        if (baseCurrency.isEmpty()) {
+            String json = new Gson().toJson(new Message("Currency: " + baseCurrencyCode + " does not exist"));
+            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, json);
+        }
+
+        String targetCurrencyCode = bodyParameters.get("targetCurrencyCode");
+        Optional<Currency> targetCurrency = currencyRepository.findByCode(targetCurrencyCode);
+        if (targetCurrency.isEmpty()) {
+            String json = new Gson().toJson(new Message("Currency: " + targetCurrencyCode + " does not exist"));
+            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, json);
+        }
+
+        bodyParameters.get("rate"); //Convert to bigdecimal/double
+        ExchangeRate newExchangeRate = new ExchangeRate();
         //TODO implement me
+        CurrencyRepository currencyRepository = new JDBCCurrencyRepository();
+        ExchangeRepository repository = new JDBCExchangeRepository();
 
     }
 
-    private List<String> readBodyParameters(HttpServletRequest req) {
+    private Map<String, String> convertToMap(List<String> bodyParameters) {
+        return bodyParameters.stream()
+                .map(str -> str.split("&"))
+                .map(Arrays::asList)
+                .flatMap(Collection::stream)
+                .map(e -> e.split("="))
+                .collect(Collectors.toMap(e -> e[0], e -> e[1]));
+    }
+
+
+    private Map<String, String> getBodyParameters(HttpServletRequest req) {
         try (BufferedReader reader = req.getReader()) {
             return reader.lines()
                     .flatMap(str -> Stream.of(str.split("&")))
-                    .toList();
+                    .map(Arrays::asList)
+                    .flatMap(Collection::stream)
+                    .map(e -> e.split("="))
+                    .collect(Collectors.toMap(e -> e[0], e -> e[1]));
         } catch (IOException e) {
             throw new ExchangeRatesServletOperationException("Cannot get reader for request: " + req, e);
         }
     }
 
-    private boolean validateParameters(List<String> params) {
+    private boolean validateParameters(Map<String, String> params) {
         List<String> requiredParameters = Arrays.asList("baseCurrencyCode", "targetCurrencyCode", "rate");
-        if (params.size() != 3) {
+        Set<String> keys = params.keySet();
+        if (keys.size() != 3) {
             return false;
         }
-        List<String> enteredParams = params.stream()
-                .flatMap(keyValue -> Stream.of(keyValue.split("=")))
-                .toList();
-        return enteredParams.containsAll(requiredParameters);
+        return keys.containsAll(requiredParameters);
     }
 
     private void setCodeAndJsonToResponse(HttpServletResponse resp, int code, String json) {
