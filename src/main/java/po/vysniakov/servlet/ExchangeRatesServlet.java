@@ -43,7 +43,7 @@ public class ExchangeRatesServlet extends HttpServlet {
         Map<String, String> bodyParameters = getBodyParameters(req);
         if (!validateParameters(bodyParameters)) {
             String json = new Gson().toJson(new Message("You need to put 3 parameters: baseCurrencyCode," +
-                    " targetCurrencyCode, rate. Rate must be positive digit"));
+                    " targetCurrencyCode, rate (must be positive digit)"));
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, json);
             return;
         }

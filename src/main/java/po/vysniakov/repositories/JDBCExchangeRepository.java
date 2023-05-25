@@ -1,6 +1,7 @@
 package po.vysniakov.repositories;
 
 import org.sqlite.SQLiteConfig;
+import po.vysniakov.exception.ExchangeRatesServletOperationException;
 import po.vysniakov.exception.RepositoryOperationException;
 import po.vysniakov.model.Currency;
 import po.vysniakov.model.ExchangeRate;
@@ -15,6 +16,7 @@ import static po.vysniakov.util.PropertiesUtil.get;
 
 public class JDBCExchangeRepository implements ExchangeRepository {
     private static final String URL = "jdbc:sqlite:" + get("db.url") + get("db.name");
+    private static final String CONNECTION_EXCEPTION = "Cannot create connection for URL: ";
     private static final String FIND_EXCHANGE_RATES_SQL = "SELECT b.id, b.code, b.full_name, b.sign, " +
             "t.id, t.code, t.full_name, t.sign, er.rate " +
             "FROM ExchangeRates er " +
@@ -28,6 +30,10 @@ public class JDBCExchangeRepository implements ExchangeRepository {
             "LEFT JOIN currencies t ON er.target_currency_id = t.id " +
             "WHERE b.code = ? AND t.code = ?";
 
+    private static final String INSERT_EXCHANGE_RATE_SQL = "INSERT INTO ExchangeRates " +
+            "(base_currency_id, target_currency_id, rate) " +
+            "VALUES (?, ?, ?);";
+
     @Override
     public List<ExchangeRate> findAll() {
         try {
@@ -40,7 +46,7 @@ public class JDBCExchangeRepository implements ExchangeRepository {
             ResultSet resultSet = findAllStatement.executeQuery();
             return collectToList(resultSet);
         } catch (SQLException e) {
-            throw new RepositoryOperationException("Cannot create connection for URL: " + URL, e);
+            throw new RepositoryOperationException(CONNECTION_EXCEPTION + " " + URL, e);
         }
     }
 
@@ -118,9 +124,45 @@ public class JDBCExchangeRepository implements ExchangeRepository {
 
     @Override
     public ExchangeRate save(ExchangeRate entity) {
-        //TODO insert config.toProperties in DriverManager.getConnection(URL, config.toProperties())
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         SQLiteConfig config = getSqLiteConfig();
+        try (Connection connection = DriverManager.getConnection(URL, config.toProperties())) {
+            return saveExchangeRate(connection, entity);
+        } catch (SQLException e) {
+            throw new ExchangeRatesServletOperationException(CONNECTION_EXCEPTION + URL, e);
+        }
+    }
+
+    private ExchangeRate saveExchangeRate(Connection connection, ExchangeRate entity) {
+        try {
+            PreparedStatement savePrepareStatement = connection.prepareStatement(INSERT_EXCHANGE_RATE_SQL,
+                    Statement.RETURN_GENERATED_KEYS);
+            fillSavePrepareStatement(savePrepareStatement, entity);
+            savePrepareStatement.executeUpdate();
+            Long generatedId = extractGeneratedKey(savePrepareStatement);
+            entity.setId(generatedId);
+            return entity;
+        } catch (SQLException e) {
+            throw new ExchangeRatesServletOperationException(e.getMessage(), e);
+        }
+    }
+
+    private static Long extractGeneratedKey(PreparedStatement prepareInsertStatement) throws SQLException {
+        ResultSet generatedKey = prepareInsertStatement.getGeneratedKeys();
+        if (generatedKey.next()) {
+            return generatedKey.getLong(1);
+        }
         return null;
+    }
+
+    private void fillSavePrepareStatement(PreparedStatement savePrepareStatement, ExchangeRate entity) throws SQLException {
+        savePrepareStatement.setLong(1, entity.getBaseCurrency().getId());
+        savePrepareStatement.setLong(2, entity.getTargetCurrency().getId());
+        savePrepareStatement.setDouble(3, entity.getRate());
     }
 
     private static SQLiteConfig getSqLiteConfig() {
