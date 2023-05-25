@@ -53,8 +53,8 @@ public class CurrenciesServlet extends HttpServlet {
             String json = new Gson().toJson(savedCurrency);
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_OK, json);
         } catch (RuntimeException e) {
-            String error = new Gson().toJson(new Message(e.getMessage()));
-            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_CONFLICT, error);
+            String message = new Gson().toJson(new Message(e.getMessage()));
+            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_CONFLICT, message);
         }
     }
 
