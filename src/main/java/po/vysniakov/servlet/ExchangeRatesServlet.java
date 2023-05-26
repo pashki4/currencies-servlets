@@ -7,12 +7,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import po.vysniakov.exception.ExchangeRateServletOperationException;
 import po.vysniakov.exception.ExchangeRatesServletOperationException;
-import po.vysniakov.model.Currency;
 import po.vysniakov.model.ExchangeRate;
 import po.vysniakov.model.Message;
-import po.vysniakov.repositories.CurrencyRepository;
 import po.vysniakov.repositories.ExchangeRepository;
-import po.vysniakov.repositories.JDBCCurrencyRepository;
 import po.vysniakov.repositories.JDBCExchangeRepository;
 
 import java.io.BufferedReader;
@@ -25,10 +22,11 @@ import java.util.stream.Stream;
 
 @WebServlet(urlPatterns = "/exchangeRates")
 public class ExchangeRatesServlet extends HttpServlet {
+    private static final String CONTENT_TYPE = "application/json; charset=UTF-8";
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
+        resp.setContentType(CONTENT_TYPE);
         ExchangeRepository repository = new JDBCExchangeRepository();
         List<ExchangeRate> exchangeRates = repository.findAll();
         String json = new Gson().toJson(exchangeRates);
@@ -37,8 +35,7 @@ public class ExchangeRatesServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
+        resp.setContentType(CONTENT_TYPE);
 
         Map<String, String> bodyParameters = getBodyParameters(req);
         if (!validateParameters(bodyParameters)) {
@@ -48,41 +45,29 @@ public class ExchangeRatesServlet extends HttpServlet {
             return;
         }
 
-        CurrencyRepository currencyRepository = new JDBCCurrencyRepository();
+        ExchangeRepository exchangeRepository = new JDBCExchangeRepository();
         String baseCurrencyCode = bodyParameters.get("baseCurrencyCode");
-        Optional<Currency> baseCurrency = currencyRepository.findByCode(baseCurrencyCode);
-        if (baseCurrency.isEmpty()) {
-            String json2 = new Gson().toJson(new Message("Currency: " + baseCurrencyCode + " does not exist"));
-            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, json2);
-        }
-
         String targetCurrencyCode = bodyParameters.get("targetCurrencyCode");
-        Optional<Currency> targetCurrency = currencyRepository.findByCode(targetCurrencyCode);
-        if (targetCurrency.isEmpty()) {
-            String json1 = new Gson().toJson(new Message("Currency: " + targetCurrencyCode + " does not exist"));
-            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, json1);
+        Optional<ExchangeRate> maybeExchangeRate = exchangeRepository.findPairByCode(baseCurrencyCode + targetCurrencyCode);
+        if (maybeExchangeRate.isEmpty()) {
+            String message = new Gson().toJson(new Message("Currency pair does not exist: " + baseCurrencyCode + targetCurrencyCode));
+            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, message);
+            return;
         }
 
         Double rate = Double.valueOf(bodyParameters.get("rate"));
-        ExchangeRate newExchangeRate = createExchangeRate(baseCurrency.get(), targetCurrency.get(), rate);
+        ExchangeRate exchangeRate = maybeExchangeRate.get();
+        exchangeRate.setRate(rate);
 
         ExchangeRepository exchangeRateRepository = new JDBCExchangeRepository();
         try {
-            ExchangeRate savedExchangeRate = exchangeRateRepository.save(newExchangeRate);
-            String json = new Gson().toJson(savedExchangeRate);
+            ExchangeRate saved = exchangeRateRepository.save(exchangeRate);
+            String json = new Gson().toJson(saved);
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_OK, json);
         } catch (RuntimeException e) {
             String message = new Gson().toJson(new Message(e.getMessage()));
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_CONFLICT, message);
         }
-    }
-
-    private ExchangeRate createExchangeRate(Currency baseCurrency, Currency targetCurrency, Double rate) {
-        ExchangeRate exchangeRate = new ExchangeRate();
-        exchangeRate.setBaseCurrency(baseCurrency);
-        exchangeRate.setTargetCurrency(targetCurrency);
-        exchangeRate.setRate(rate);
-        return exchangeRate;
     }
 
     private Map<String, String> getBodyParameters(HttpServletRequest req) {

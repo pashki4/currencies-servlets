@@ -17,11 +17,12 @@ import java.util.Optional;
 
 @WebServlet(urlPatterns = "/currency/*")
 public class CurrencyServlet extends HttpServlet {
+    private static final String CONTENT_TYPE = "application/json; charset=UTF-8";
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
         CurrencyRepository currencyRepository = new JDBCCurrencyRepository();
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
+        resp.setContentType(CONTENT_TYPE);
         Optional<String> requestedCurrency = getRequestedCurrency(req);
 
         if (requestedCurrency.isEmpty()) {

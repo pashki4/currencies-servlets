@@ -17,13 +17,13 @@ import static po.vysniakov.util.PropertiesUtil.get;
 public class JDBCExchangeRepository implements ExchangeRepository {
     private static final String URL = "jdbc:sqlite:" + get("db.url") + get("db.name");
     private static final String CONNECTION_EXCEPTION = "Cannot create connection for URL: ";
-    private static final String FIND_EXCHANGE_RATES_SQL = "SELECT b.id, b.code, b.full_name, b.sign, " +
+    private static final String FIND_EXCHANGE_RATES_SQL = "SELECT er.id, b.id, b.code, b.full_name, b.sign, " +
             "t.id, t.code, t.full_name, t.sign, er.rate " +
             "FROM ExchangeRates er " +
             "LEFT JOIN currencies b ON er.base_currency_id = b.id " +
             "LEFT JOIN currencies t ON er.target_currency_id = t.id;";
 
-    private static final String FIND_EXCHANGE_RATE_SQL = "SELECT b.id, b.code, b.full_name, b.sign, " +
+    private static final String FIND_EXCHANGE_RATE_SQL = "SELECT er.id, b.id, b.code, b.full_name, b.sign, " +
             "t.id, t.code, t.full_name, t.sign, er.rate " +
             "FROM ExchangeRates er " +
             "LEFT JOIN currencies b ON er.base_currency_id = b.id " +
@@ -34,15 +34,19 @@ public class JDBCExchangeRepository implements ExchangeRepository {
             "(base_currency_id, target_currency_id, rate) " +
             "VALUES (?, ?, ?);";
 
+    private static final String UPDATE_RATE_SQL = "UPDATE ExchangeRates SET rate = ? WHERE base_currency_id = ? " +
+            "AND target_currency_id = ?;";
+    private static final String DRIVER_NAME = "org.sqlite.JDBC";
+
     @Override
     public List<ExchangeRate> findAll() {
         try {
-            Class.forName("org.sqlite.JDBC");
+            Class.forName(DRIVER_NAME);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-        try (Connection connection = DriverManager.getConnection(URL)) {
-            PreparedStatement findAllStatement = prepareFindAllStatement(connection);
+        try (Connection connection = DriverManager.getConnection(URL);
+             PreparedStatement findAllStatement = prepareFindAllStatement(connection)) {
             ResultSet resultSet = findAllStatement.executeQuery();
             return collectToList(resultSet);
         } catch (SQLException e) {
@@ -68,16 +72,16 @@ public class JDBCExchangeRepository implements ExchangeRepository {
     }
 
     @Override
-    public Optional<ExchangeRate> findPair(String pair) {
+    public Optional<ExchangeRate> findPairByCode(String pair) {
         try {
-            Class.forName("org.sqlite.JDBC");
+            Class.forName(DRIVER_NAME);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
         try (Connection connection = DriverManager.getConnection(URL)) {
             return findExchangeRate(connection, pair);
         } catch (SQLException e) {
-            throw new RepositoryOperationException("Cannot create connection by URL: " + URL, e);
+            throw new RepositoryOperationException(CONNECTION_EXCEPTION + "  " + URL, e);
         }
     }
 
@@ -103,37 +107,38 @@ public class JDBCExchangeRepository implements ExchangeRepository {
 
     private Optional<ExchangeRate> parseExchangeRate(ResultSet resultSet) throws SQLException {
         ExchangeRate exchangeRate = new ExchangeRate();
+        exchangeRate.setId(resultSet.getLong(1));
 
         Currency baseCurrency = new Currency();
-        baseCurrency.setId(resultSet.getLong(1));
-        baseCurrency.setCode(resultSet.getString(2));
-        baseCurrency.setName(resultSet.getString(3));
-        baseCurrency.setSign(resultSet.getString(4));
+        baseCurrency.setId(resultSet.getLong(2));
+        baseCurrency.setCode(resultSet.getString(3));
+        baseCurrency.setName(resultSet.getString(4));
+        baseCurrency.setSign(resultSet.getString(5));
 
         Currency targetCurrency = new Currency();
-        targetCurrency.setId(resultSet.getLong(5));
-        targetCurrency.setCode(resultSet.getString(6));
-        targetCurrency.setName(resultSet.getString(7));
-        targetCurrency.setSign(resultSet.getString(8));
+        targetCurrency.setId(resultSet.getLong(6));
+        targetCurrency.setCode(resultSet.getString(7));
+        targetCurrency.setName(resultSet.getString(8));
+        targetCurrency.setSign(resultSet.getString(9));
 
         exchangeRate.setBaseCurrency(baseCurrency);
         exchangeRate.setTargetCurrency(targetCurrency);
-        exchangeRate.setRate(resultSet.getDouble(9));
+        exchangeRate.setRate(resultSet.getDouble(10));
         return Optional.of(exchangeRate);
     }
 
     @Override
-    public ExchangeRate save(ExchangeRate entity) {
+    public ExchangeRate save(ExchangeRate exchangeRate) {
         try {
-            Class.forName("org.sqlite.JDBC");
+            Class.forName(DRIVER_NAME);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
         SQLiteConfig config = getSqLiteConfig();
         try (Connection connection = DriverManager.getConnection(URL, config.toProperties())) {
-            return saveExchangeRate(connection, entity);
+            return saveExchangeRate(connection, exchangeRate);
         } catch (SQLException e) {
-            throw new ExchangeRatesServletOperationException(CONNECTION_EXCEPTION + URL, e);
+            throw new ExchangeRatesServletOperationException(CONNECTION_EXCEPTION + " " + URL, e);
         }
     }
 
@@ -169,5 +174,37 @@ public class JDBCExchangeRepository implements ExchangeRepository {
         SQLiteConfig config = new SQLiteConfig();
         config.enforceForeignKeys(true);
         return config;
+    }
+
+    @Override
+    public void updateRate(ExchangeRate exchangeRate) {
+        try {
+            Class.forName(DRIVER_NAME);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        SQLiteConfig config = getSqLiteConfig();
+        try (Connection connection = DriverManager.getConnection(URL, config.toProperties())) {
+            updateExchangeRate(connection, exchangeRate);
+        } catch (SQLException e) {
+            throw new ExchangeRatesServletOperationException(CONNECTION_EXCEPTION + " " + URL, e);
+        }
+    }
+
+    private void updateExchangeRate(Connection connection, ExchangeRate exchangeRate) {
+        try {
+            PreparedStatement updatePrepareStatement =
+                    connection.prepareStatement(UPDATE_RATE_SQL);
+            fillUpdatePrepareStatement(updatePrepareStatement, exchangeRate);
+            updatePrepareStatement.executeUpdate();
+        } catch (SQLException e) {
+            throw new ExchangeRatesServletOperationException(e.getMessage(), e);
+        }
+    }
+
+    private void fillUpdatePrepareStatement(PreparedStatement statement, ExchangeRate entity) throws SQLException {
+        statement.setDouble(1, entity.getRate());
+        statement.setLong(2, entity.getBaseCurrency().getId());
+        statement.setLong(3, entity.getTargetCurrency().getId());
     }
 }

@@ -23,10 +23,12 @@ import java.util.stream.Stream;
 
 @WebServlet("/currencies")
 public class CurrenciesServlet extends HttpServlet {
+
+    private static final String CONTENT_TYPE = "application/json; charset=UTF-8";
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
+        resp.setContentType(CONTENT_TYPE);
         CurrencyRepository currencyRepository = new JDBCCurrencyRepository();
         List<Currency> currencies = currencyRepository.findAll();
 
@@ -36,8 +38,7 @@ public class CurrenciesServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
+        resp.setContentType(CONTENT_TYPE);
         String[] bodyParameters = readBodyParameters(req);
 
         if (!validateParameters(bodyParameters)) {
