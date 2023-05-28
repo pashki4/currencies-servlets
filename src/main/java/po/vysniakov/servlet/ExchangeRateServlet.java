@@ -8,14 +8,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import po.vysniakov.exception.ExchangeRateServletOperationException;
 import po.vysniakov.exception.ExchangeRatesServletOperationException;
-import po.vysniakov.model.Currency;
 import po.vysniakov.model.ExchangeRate;
 import po.vysniakov.model.Message;
-import po.vysniakov.repositories.CurrencyRepository;
-import po.vysniakov.repositories.JDBCCurrencyRepository;
-import po.vysniakov.repositories.JDBCExchangeRepository;
 import po.vysniakov.repositories.ExchangeRepository;
-import po.vysniakov.util.ExchangeRateUtil;
+import po.vysniakov.repositories.JDBCExchangeRepository;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -29,6 +25,7 @@ import java.util.stream.Stream;
 public class ExchangeRateServlet extends HttpServlet {
 
     private static final String CONTENT_TYPE = "application/json; charset=UTF-8";
+    private static final List<String> REQUIRED_REQUEST_BODY_PARAMS = List.of("rate");
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
@@ -92,8 +89,9 @@ public class ExchangeRateServlet extends HttpServlet {
         }
 
         Map<String, String> bodyParameters = getBodyParameters(req);
-        if (!validateParameters(bodyParameters)) {
-            String message = new Gson().toJson(new Message("You need to put parameter rate (must be positive digit)"));
+        if (!validateRequestBody(bodyParameters)) {
+            String message = new Gson().toJson(new Message("You need to put parameter: " +
+                    String.join(", ", REQUIRED_REQUEST_BODY_PARAMS) + " (must be positive digit)"));
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, message);
             return;
         }
@@ -134,14 +132,13 @@ public class ExchangeRateServlet extends HttpServlet {
         }
     }
 
-    private boolean validateParameters(Map<String, String> params) {
-        List<String> requiredParameters = List.of("rate");
+    private boolean validateRequestBody(Map<String, String> params) {
         Set<String> keys = params.keySet();
         if (keys.size() != 1) {
             return false;
         }
 
-        if (!keys.containsAll(requiredParameters)) {
+        if (!keys.containsAll(REQUIRED_REQUEST_BODY_PARAMS)) {
             return false;
         }
         String rateValue = params.get("rate");

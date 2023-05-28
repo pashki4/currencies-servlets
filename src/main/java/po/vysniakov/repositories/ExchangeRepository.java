@@ -8,4 +8,6 @@ public interface ExchangeRepository extends CrudRepository<ExchangeRate>{
     Optional<ExchangeRate> findPairByCode(String pair);
 
     void updateRate(ExchangeRate exchangeRate);
+
+
 }

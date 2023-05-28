@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 @WebServlet(urlPatterns = "/exchangeRates")
 public class ExchangeRatesServlet extends HttpServlet {
     private static final String CONTENT_TYPE = "application/json; charset=UTF-8";
+    private static final List<String> REQUIRED_PARAMETERS = List.of("baseCurrencyCode", "targetCurrencyCode", "rate");
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
@@ -39,9 +40,9 @@ public class ExchangeRatesServlet extends HttpServlet {
 
         Map<String, String> bodyParameters = getBodyParameters(req);
         if (!validateParameters(bodyParameters)) {
-            String json = new Gson().toJson(new Message("You need to put 3 parameters: baseCurrencyCode," +
-                    " targetCurrencyCode, rate (must be positive digit)"));
-            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, json);
+            String message = new Gson().toJson(new Message("You need to put 3 parameters: " +
+                    String.join(", ", REQUIRED_PARAMETERS) + " (rate must be positive digit)"));
+            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, message);
             return;
         }
 
@@ -84,13 +85,12 @@ public class ExchangeRatesServlet extends HttpServlet {
     }
 
     private boolean validateParameters(Map<String, String> params) {
-        List<String> requiredParameters = Arrays.asList("baseCurrencyCode", "targetCurrencyCode", "rate");
         Set<String> keys = params.keySet();
         if (keys.size() != 3) {
             return false;
         }
 
-        if (!keys.containsAll(requiredParameters)) {
+        if (!keys.containsAll(REQUIRED_PARAMETERS)) {
             return false;
         }
         String rateValue = params.get("rate");
@@ -104,6 +104,7 @@ public class ExchangeRatesServlet extends HttpServlet {
         Pattern pattern = Pattern.compile("\\d+(\\.\\d+)?");
         return pattern.matcher(value).matches();
     }
+
 
     private void setCodeAndJsonToResponse(HttpServletResponse resp, int code, String json) {
         resp.setStatus(code);
