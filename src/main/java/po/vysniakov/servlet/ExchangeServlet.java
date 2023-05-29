@@ -42,8 +42,8 @@ public class ExchangeServlet extends HttpServlet {
         ExchangeRepository exchangeRepository = new JDBCExchangeRepository();
         Optional<ExchangeRate> exchangeRate =
                 exchangeRepository.findPairByCode(parameters.get("from") + parameters.get("to"))
-                        .or(() -> exchangeRepository.findPairByCode(parameters.get("to") + parameters.get("from")))
-                        .or(() -> usdSearchStrategy(parameters.get("from") + parameters.get("to"), exchangeRepository));
+                        .or(() -> reverseSearch(parameters.get("from") + parameters.get("to"), exchangeRepository))
+                        .or(() -> usdBaseSearch(parameters.get("from") + parameters.get("to"), exchangeRepository));
 
         if (exchangeRate.isEmpty()) {
             String message = new Gson().toJson(new Message("There is no data for currency pair: " +
@@ -56,20 +56,25 @@ public class ExchangeServlet extends HttpServlet {
         setCodeAndJsonToResponse(resp, HttpServletResponse.SC_OK, json);
     }
 
-    private Exchange createExchange(ExchangeRate exchangeRate, String amount) {
-        BigDecimal convertedAmount = BigDecimal.valueOf(Double.parseDouble(amount))
-                .multiply(BigDecimal.valueOf(exchangeRate.getRate()))
-                .setScale(2, RoundingMode.HALF_EVEN);
-        Exchange result = new Exchange();
-        result.setConvertedAmount(convertedAmount);
-        result.setRate(exchangeRate.getRate());
-        result.setAmount(Double.valueOf(amount));
-        result.setBaseCurrency(exchangeRate.getBaseCurrency());
-        result.setTargetCurrency(exchangeRate.getTargetCurrency());
-        return result;
+    private Optional<? extends ExchangeRate> reverseSearch(String pair, ExchangeRepository exchangeRepository) {
+        String baseCurrencyCode = pair.substring(3);
+        String targetCurrencyCode = pair.substring(0, 3);
+        Optional<ExchangeRate> exchangeRate = exchangeRepository.findPairByCode(baseCurrencyCode + targetCurrencyCode);
+        if(exchangeRate.isPresent()) {
+            return reverse(exchangeRate.get());
+        }
+        return Optional.empty();
     }
 
-    private Optional<ExchangeRate> usdSearchStrategy(String pair, ExchangeRepository exchangeRepository) {
+    private Optional<? extends ExchangeRate> reverse(ExchangeRate exchangeRate) {
+        ExchangeRate reversed = new ExchangeRate();
+        reversed.setRate(1 / exchangeRate.getRate());
+        reversed.setBaseCurrency(exchangeRate.getTargetCurrency());
+        reversed.setTargetCurrency(exchangeRate.getBaseCurrency());
+        return Optional.of(reversed);
+    }
+
+    private Optional<ExchangeRate> usdBaseSearch(String pair, ExchangeRepository exchangeRepository) {
         String baseCurrencyCode = pair.substring(0, 3);
         String targetCurrencyCode = pair.substring(3);
         Optional<ExchangeRate> baseToUsd = exchangeRepository.findPairByCode(baseCurrencyCode + "USD");
@@ -86,6 +91,19 @@ public class ExchangeServlet extends HttpServlet {
         result.setBaseCurrency(baseToUsd.get().getBaseCurrency());
         result.setTargetCurrency((targetToUsd.get().getBaseCurrency()));
         return Optional.of(result);
+    }
+
+    private Exchange createExchange(ExchangeRate exchangeRate, String amount) {
+        BigDecimal convertedAmount = BigDecimal.valueOf(Double.parseDouble(amount))
+                .multiply(BigDecimal.valueOf(exchangeRate.getRate()))
+                .setScale(2, RoundingMode.HALF_EVEN);
+        Exchange result = new Exchange();
+        result.setConvertedAmount(convertedAmount);
+        result.setRate(exchangeRate.getRate());
+        result.setAmount(Double.valueOf(amount));
+        result.setBaseCurrency(exchangeRate.getBaseCurrency());
+        result.setTargetCurrency(exchangeRate.getTargetCurrency());
+        return result;
     }
 
     private Double getExchangeRate(Double baseRate, Double targetRate) {

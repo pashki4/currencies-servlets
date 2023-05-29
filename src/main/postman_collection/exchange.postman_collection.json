@@ -1,0 +1,157 @@
+{
+	"info": {
+		"_postman_id": "c622503f-852d-4832-95cb-8a54604d9ad3",
+		"name": "exchange",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "21044889"
+	},
+	"item": [
+		{
+			"name": "Get currencies",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/currencies"
+			},
+			"response": []
+		},
+		{
+			"name": "Get currency by code",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/currency/EUR"
+			},
+			"response": []
+		},
+		{
+			"name": "Add currency",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "name",
+							"value": "Argentine Peso",
+							"type": "text"
+						},
+						{
+							"key": "code",
+							"value": "ARS",
+							"type": "text"
+						},
+						{
+							"key": "sign",
+							"value": "Arg$",
+							"type": "text"
+						}
+					]
+				},
+				"url": "http://localhost:8080/currencies"
+			},
+			"response": []
+		},
+		{
+			"name": "Get exchange rates",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/exchangeRates"
+			},
+			"response": []
+		},
+		{
+			"name": "Get exchange rate by code",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/exchangeRate/USDKRW"
+			},
+			"response": []
+		},
+		{
+			"name": "Add exhange rate",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "baseCurrencyCode",
+							"value": "ARS",
+							"type": "text"
+						},
+						{
+							"key": "targetCurrencyCode",
+							"value": "USD",
+							"type": "text"
+						},
+						{
+							"key": "rate",
+							"value": "0.0042",
+							"type": "text"
+						}
+					]
+				},
+				"url": "http://localhost:8080/exchangeRates"
+			},
+			"response": []
+		},
+		{
+			"name": "Update exchange rate",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "rate",
+							"value": "30000",
+							"type": "text"
+						}
+					]
+				},
+				"url": "http://localhost:8080/exchangeRate/BTCARS",
+				"description": "patch"
+			},
+			"response": []
+		},
+		{
+			"name": "Exchange",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/exchange?from=JPY&to=PLN&amount=100",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"exchange"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "JPY"
+						},
+						{
+							"key": "to",
+							"value": "PLN"
+						},
+						{
+							"key": "amount",
+							"value": "100"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
