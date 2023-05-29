@@ -7,9 +7,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import po.vysniakov.exception.ExchangeRateServletOperationException;
 import po.vysniakov.exception.ExchangeRatesServletOperationException;
+import po.vysniakov.model.Currency;
 import po.vysniakov.model.ExchangeRate;
 import po.vysniakov.model.Message;
+import po.vysniakov.repositories.CurrencyRepository;
 import po.vysniakov.repositories.ExchangeRepository;
+import po.vysniakov.repositories.JDBCCurrencyRepository;
 import po.vysniakov.repositories.JDBCExchangeRepository;
 
 import java.io.BufferedReader;
@@ -37,7 +40,6 @@ public class ExchangeRatesServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
         resp.setContentType(CONTENT_TYPE);
-
         Map<String, String> bodyParameters = getBodyParameters(req);
         if (!validateParameters(bodyParameters)) {
             String message = new Gson().toJson(new Message("You need to put 3 parameters: " +
@@ -46,23 +48,32 @@ public class ExchangeRatesServlet extends HttpServlet {
             return;
         }
 
-        ExchangeRepository exchangeRepository = new JDBCExchangeRepository();
         String baseCurrencyCode = bodyParameters.get("baseCurrencyCode");
         String targetCurrencyCode = bodyParameters.get("targetCurrencyCode");
-        Optional<ExchangeRate> maybeExchangeRate = exchangeRepository.findPairByCode(baseCurrencyCode + targetCurrencyCode);
-        if (maybeExchangeRate.isEmpty()) {
-            String message = new Gson().toJson(new Message("Currency pair does not exist: " + baseCurrencyCode + targetCurrencyCode));
+        CurrencyRepository currencyRepository = new JDBCCurrencyRepository();
+
+        Optional<Currency> baseCurrency = currencyRepository.findByCode(baseCurrencyCode);
+        if (baseCurrency.isEmpty()) {
+            String message = new Gson().toJson(new Message("Currency does not exist: " + baseCurrencyCode));
+            setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, message);
+            return;
+        }
+        Optional<Currency> targetCurrency = currencyRepository.findByCode(targetCurrencyCode);
+        if (targetCurrency.isEmpty()) {
+            String message = new Gson().toJson(new Message("Currency does not exist: " + targetCurrencyCode));
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_BAD_REQUEST, message);
             return;
         }
 
         Double rate = Double.valueOf(bodyParameters.get("rate"));
-        ExchangeRate exchangeRate = maybeExchangeRate.get();
-        exchangeRate.setRate(rate);
+        ExchangeRate newExchangeRate = new ExchangeRate();
+        newExchangeRate.setRate(rate);
+        newExchangeRate.setBaseCurrency(baseCurrency.get());
+        newExchangeRate.setTargetCurrency(targetCurrency.get());
 
         ExchangeRepository exchangeRateRepository = new JDBCExchangeRepository();
         try {
-            ExchangeRate saved = exchangeRateRepository.save(exchangeRate);
+            ExchangeRate saved = exchangeRateRepository.save(newExchangeRate);
             String json = new Gson().toJson(saved);
             setCodeAndJsonToResponse(resp, HttpServletResponse.SC_OK, json);
         } catch (RuntimeException e) {

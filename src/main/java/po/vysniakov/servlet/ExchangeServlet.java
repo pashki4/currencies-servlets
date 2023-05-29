@@ -41,9 +41,9 @@ public class ExchangeServlet extends HttpServlet {
 
         ExchangeRepository exchangeRepository = new JDBCExchangeRepository();
         Optional<ExchangeRate> exchangeRate =
-                exchangeRepository.findPairByCode(parameters.get("from") + parameters.get("to"));
-        exchangeRate = exchangeRate.or(() -> exchangeRepository.findPairByCode(parameters.get("to") + parameters.get("from")))
-                .or(() -> usdSearchStrategy(parameters.get("from") + parameters.get("to"), exchangeRepository));
+                exchangeRepository.findPairByCode(parameters.get("from") + parameters.get("to"))
+                        .or(() -> exchangeRepository.findPairByCode(parameters.get("to") + parameters.get("from")))
+                        .or(() -> usdSearchStrategy(parameters.get("from") + parameters.get("to"), exchangeRepository));
 
         if (exchangeRate.isEmpty()) {
             String message = new Gson().toJson(new Message("There is no data for currency pair: " +
@@ -84,7 +84,7 @@ public class ExchangeServlet extends HttpServlet {
         ExchangeRate result = new ExchangeRate();
         result.setRate(exchangeRate);
         result.setBaseCurrency(baseToUsd.get().getBaseCurrency());
-        result.setBaseCurrency(targetToUsd.get().getTargetCurrency());
+        result.setTargetCurrency((targetToUsd.get().getBaseCurrency()));
         return Optional.of(result);
     }
 
